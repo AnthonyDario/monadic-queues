@@ -6,3 +6,7 @@ services:
   
   rabbit:
     image: rabbitmq:latest
+    hostname: rabbit
+    ports:
+      - "5672"
+      - "15672"
