@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -28,21 +29,31 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 
 func makeSendHandler(q amqp.Queue, ch *amqp.Channel, ctx context.Context) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Print("Recieved Send Request")
+
+		if r.Method != "POST" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Incorrect method, this endpoint needs a body")
+		}
+
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Hi there, I am sending your message!")
 
-		body := "Hello World!"
-		err := ch.PublishWithContext(ctx,
+		reqBody, err := ioutil.ReadAll(r.Body)
+		failOnError(err, "Failed to publish a message")
+
+		err = ch.PublishWithContext(ctx,
 			"",     // exchange
 			q.Name, // routing key
 			false,  // mandatory
 			false,  // immediate
 			amqp.Publishing{
 				ContentType: "text/plain",
-				Body:        []byte(body),
+				Body:        []byte(reqBody),
 			})
 		failOnError(err, "Failed to publish a message")
+		fmt.Fprintf(w, "Message Sent")
+		log.Print("Finished Sending Message")
 	}
 }
 
