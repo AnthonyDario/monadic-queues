@@ -1,6 +1,8 @@
 # Todo 
 [] Make some dynamic config thing
 [] Make a log file container/server
+    [x] Make a server that writes requests to the log
+    []  Turn the server into a container
 [] Make Monadic interface for Queue
     [] Logging Monad
         [] Send a message along with a log

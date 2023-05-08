@@ -36,9 +36,6 @@ func makeSendHandler(q amqp.Queue, ch *amqp.Channel, ctx context.Context) handle
 			fmt.Fprintf(w, "Incorrect method, this endpoint needs a body")
 		}
 
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-
 		reqBody, err := ioutil.ReadAll(r.Body)
 		failOnError(err, "Failed to publish a message")
 
@@ -53,6 +50,9 @@ func makeSendHandler(q amqp.Queue, ch *amqp.Channel, ctx context.Context) handle
 			})
 		failOnError(err, "Failed to publish a message")
 		fmt.Fprintf(w, "Message Sent")
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
 		log.Print("Finished Sending Message")
 	}
 }
@@ -78,6 +78,7 @@ func connect() (*amqp.Connection, *amqp.Channel, amqp.Queue) {
 
 	return conn, ch, q
 }
+
 func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
