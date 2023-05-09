@@ -13,7 +13,7 @@ func main() {
 	body := []byte(json)
 	res, err := http.Post("http://localhost:8000/log", "text/plain", bytes.NewReader(body))
 	if err != nil {
-		log.Fatalf("error with get", err)
+		log.Fatalf("error with posting the log: %s", err)
 	}
 
 	resBody, err := io.ReadAll(res.Body)
