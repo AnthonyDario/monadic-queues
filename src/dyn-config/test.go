@@ -73,4 +73,6 @@ func main() {
     testReading("key")
     testWriting("newfield", "newvalue")
     testWriting("newnew", "oldold")
+    testWriting("dockertest", "dockersuccess")
+    testReading("dockertest")
 }
