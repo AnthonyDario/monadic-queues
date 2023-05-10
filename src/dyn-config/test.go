@@ -1,3 +1,6 @@
+/*
+ * Tests for the dynamic config server
+ */
 package main
 
 import (
@@ -6,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-    "encoding/json"
 )
 
 type readRequest struct {
@@ -18,6 +20,13 @@ type Message struct {
     Body string
 }
 
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Panicf("%s: %s", msg, err)
+	}
+}
+
+/*
 func testJson() {
     js := []byte(`{ "Field": "key" }`)
 
@@ -29,22 +38,39 @@ func testJson() {
 
     log.Print(fmt.Sprintf("tt.field = %s", tt.Field))
 }
+*/
 
-func main() {
-    testJson()
-
-	json := `{ "field": "key" }`
-	body := []byte(json)
+func testReading(field string) {
+	js := fmt.Sprintf(`{ "field": "%s" }`, field)
+	body := []byte(js)
     res, err := http.Post("http://localhost:9090/read",
                           "application/json", 
                           bytes.NewReader(body))
-    if err != nil {
-		log.Fatalf("error with posting the read request: %s", err)
-    }
+    failOnError(err, "Error with posting the read request")
 
 	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		log.Fatalf("impossible to read all body of response: %s", err)
-	}
-	log.Printf("res body: %s", string(resBody))
+    failOnError(err, "Impossible to read entire body of response")
+
+	log.Printf("read response body: %s", string(resBody))
+}
+
+func testWriting(field string, value string) {
+    js := fmt.Sprintf("{ \"Field\": \"%s\", \"Value\": \"%s\" }", field, value)
+    body := []byte(js)
+    res, err := http.Post("http://localhost:9090/write",
+                          "application/json",
+                          bytes.NewReader(body))
+    failOnError(err, "Error with posting the write request")
+
+    resBody, err := io.ReadAll(res.Body)
+    failOnError(err, "Impossible to read entire body of response")
+
+    log.Printf("Write response body: %s", string(resBody))
+}
+
+func main() {
+    //testJson()
+    testReading("key")
+    testWriting("newfield", "newvalue")
+    testWriting("newnew", "oldold")
 }
