@@ -21,12 +21,13 @@ func logHandler (w http.ResponseWriter, r *http.Request) {
     if r.Method != "POST" {
         w.WriteHeader(http.StatusBadRequest)
         fmt.Fprintf(w, "Incorrect method, this endpoint needs a body")
+        return
     }
 
     reqBody, err := ioutil.ReadAll(r.Body)
+    failOnError(err, "Failed to publish a message")
 
     log.Println(string(reqBody))
-    failOnError(err, "Failed to publish a message")
 }
 
 func main() {
