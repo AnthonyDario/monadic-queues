@@ -9,7 +9,7 @@ services:
     hostname: rabbit
     ports:
       - "5672"
-      - "15672"
+      - "15692"
   log:
     image: dyn-conf:latest
     build:
