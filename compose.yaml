@@ -10,3 +10,18 @@ services:
     ports:
       - "5672"
       - "15672"
+  log:
+    image: dyn-conf:latest
+    build:
+      context: src/dyn-config
+      dockerfile: src/dyn-config.Dockerfile
+    ports:
+      - "9090"
+
+  conf:
+    image: logger
+    build:
+      context: src/logger
+      dockerfile: stc/logger.Dockerfile
+    ports:
+      - "8000"
