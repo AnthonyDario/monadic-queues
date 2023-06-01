@@ -1,15 +1,14 @@
 services:
-  postgres:
-    image: postgres:latest
-    environment:
-      - POSTGRES_PASSWORD=pass
-  
-  rabbit:
-    image: rabbitmq:latest
-    hostname: rabbit
+  # Project containers
+
+  monad-queue:
+    image: monad-queue
+    build:
+      context: src/monads
+      dockerfile: src/monads.Dockerfile
     ports:
-      - "5672"
-      - "15692"
+      - "8901"
+
   log:
     image: dyn-conf:latest
     build:
@@ -25,3 +24,16 @@ services:
       dockerfile: stc/logger.Dockerfile
     ports:
       - "8000"
+
+  # Infrastructure containers
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=pass
+  
+  rabbit:
+    image: rabbitmq:latest
+    hostname: rabbit
+    ports:
+      - "5672"
+      - "15692"
