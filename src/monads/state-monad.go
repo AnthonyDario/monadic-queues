@@ -89,16 +89,84 @@ func execState [S any, T any] (m StateMonad[S, T], s S) S {
     return state
 }
 
+// Test stuff
+// ----------------
+
+// Want to copy maps since they are passed by reference in go
+func copyMap[K comparable, V any] (m map[K]V) map[K]V {
+    out := make(map[K]V)
+    for key, value := range m {
+          out[key] = value
+    }
+    return out
+}
+
+// Some sugar to make our pipeline cleaner
+func wrapModify[S any, T any] (sm StateMonad[S, T]) func (S) StateMonad[S, T] {
+    return func (s S) StateMonad[S, T] {
+        return sm
+    }
+}
+
+// TODO: Figure out this pipeline function. It will make chaining the calls
+// much cleaner
+
+/*
+// pipe takes in a list of monads and binds them all
+func pipeModify[S any, T any] (ms []StateMonad[S, T]) StateMonad[S, T] {
+    var out = ms[0]
+    for _, sm := range ms[1:] {
+        out = bind[S, T, T](out, wrapModify(sm))
+    }
+
+    return out
+}
+*/
+
 func main () {
     // A simple example that increments an integer state
 
     // Our stateful computation increments the state by one
-    var sm = modify[int, int](func (s int) (int) {
-        return s + 1
-    })
+    add1 := func (s int) (int) { return s + 1 }
+
+    sm := bind(modify[int, int](add1), 
+               func (s int) StateMonad[int, int] { 
+                   return modify[int, int](add1) 
+                })
 
     // Now we apply the monad to an initial state (putting the state in the monad)
     finalState := execState(sm, 0)
-
     log.Print(finalState)
+
+    // One more complicated example.  We keep track of pizza inventory and then
+    // increment and decrement depending on the orders.
+
+    type pizzas = map[string]int
+
+    // Takes in a type of pizza, and makes it?
+    var MakePizza = func (p string) func(pizzas) pizzas {
+        return func (s pizzas) pizzas {
+            // Copy the map since golang passes maps by reference
+            newMap := copyMap(s)
+            newMap[p] = newMap[p] + 1
+            return newMap
+        }
+    }
+
+    makeCheese    := modify[pizzas, pizzas](MakePizza("Cheese"))
+    makePepperoni := modify[pizzas, pizzas](MakePizza("Pepperoni"))
+    makeMeat      := modify[pizzas, pizzas](MakePizza("Meat"))
+    makeVeggie    := modify[pizzas, pizzas](MakePizza("Veggie"))
+
+    // TODO: this is gross, try and figure out the pipeline function above
+    pipeline := bind(makeCheese, wrapModify(makePepperoni))
+    pipeline = bind(pipeline, wrapModify(makePepperoni))
+    pipeline = bind(pipeline, wrapModify(makeMeat))
+    pipeline = bind(pipeline, wrapModify(makeMeat))
+    pipeline = bind(pipeline, wrapModify(makeVeggie))
+    pipeline = bind(pipeline, wrapModify(makeMeat))
+
+    inv := make(pizzas)
+    finalPizzas := execState(pipeline, inv)
+    log.Print(finalPizzas)
 }
