@@ -1,6 +1,9 @@
+// A service wrapping a queue.  It manages the logging that comes in with
+// the messages. Committing logs to the log server.
 package main
 
 import (
+    "encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -17,13 +20,17 @@ func failOnError(err error, msg string) {
 	}
 }
 
-// Handlers
-// ---------------------
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi there, I love %s!", r.URL.Path[1:])
+// Interface types
+// --------------------
+type SendRequest struct {
+    Msg string
+    Log string
+    Dest string
 }
 
-func makeSendHandler(q Queue) handler {
+// Handlers
+// ---------------------
+func makeSendHandler(qs map[string]*Queue) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Print("Recieved Send Request")
 
@@ -32,11 +39,22 @@ func makeSendHandler(q Queue) handler {
 			fmt.Fprintf(w, "Incorrect method, this endpoint needs a body")
 		}
 
-		reqBody, err := ioutil.ReadAll(r.Body)
+        // Read the message
+		bs, err := ioutil.ReadAll(r.Body)
 		failOnError(err, "Failed to publish a message")
 
-        err = q.send([]byte(reqBody))
-		failOnError(err, "Failed to publish a message")
+        // Extract the log line
+        var req SendRequest
+        err = json.Unmarshal(bs, &req)
+        failOnError(err, "Could not unmarshal send Request json")
+
+        // Send the log message to the log queue
+        err = qs["log"].send([]byte(req.Log))
+        failOnError(err, "Failed to publish log lines")
+
+        // And the desired message to the message queue
+        err = qs[req.Dest].send([]byte(req.Msg))
+        failOnError(err, "Failed to publish queue message")
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
@@ -46,11 +64,17 @@ func makeSendHandler(q Queue) handler {
 }
 
 func main() {
-	q := connect("pizza")
-	defer q.Close()
+    // Define our queues
+	pq := connect("pizza")
+    lq := connect("log")
+    m := make(map[string]*Queue)
+    m["pizza"] = &pq
+    m["log"] = &lq
+	defer pq.Close()
+	defer lq.Close()
 
-	http.HandleFunc("/", helloHandler)
-	http.HandleFunc("/send", makeSendHandler(q))
+    // Build our handlers
+	http.HandleFunc("/send", makeSendHandler(m))
 	log.Print("Starting Server")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
