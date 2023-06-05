@@ -22,7 +22,7 @@ func (q *Queue) Close () {
 }
 
 // Connect to a queue/channel
-func connect(qname string) Queue {
+func Connect(qname string) Queue {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 
@@ -42,7 +42,7 @@ func connect(qname string) Queue {
 	return Queue{*ch, *conn, q}
 }
 
-func (q *Queue) send(msg []byte) error {
+func (q *Queue) Send(msg []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 
                                        5 * time.Second)
 	defer cancel()

@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+    c "common"
 )
 
 type handler func(http.ResponseWriter, *http.Request)
@@ -30,7 +32,7 @@ type SendRequest struct {
 
 // Handlers
 // ---------------------
-func makeSendHandler(qs map[string]*Queue) handler {
+func makeSendHandler(qs map[string]*c.Queue) handler {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Print("Recieved Send Request")
 
@@ -49,11 +51,11 @@ func makeSendHandler(qs map[string]*Queue) handler {
         failOnError(err, "Could not unmarshal send Request json")
 
         // Send the log message to the log queue
-        err = qs["log"].send([]byte(req.Log))
+        err = qs["log"].Send([]byte(req.Log))
         failOnError(err, "Failed to publish log lines")
 
         // And the desired message to the message queue
-        err = qs[req.Dest].send([]byte(req.Msg))
+        err = qs[req.Dest].Send([]byte(req.Msg))
         failOnError(err, "Failed to publish queue message")
 
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -65,9 +67,9 @@ func makeSendHandler(qs map[string]*Queue) handler {
 
 func main() {
     // Define our queues
-	pq := connect("pizza")
-    lq := connect("log")
-    m := make(map[string]*Queue)
+	pq := c.Connect("pizza")
+    lq := c.Connect("log")
+    m := make(map[string]*c.Queue)
     m["pizza"] = &pq
     m["log"] = &lq
 	defer pq.Close()
