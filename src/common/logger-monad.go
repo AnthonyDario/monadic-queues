@@ -2,7 +2,7 @@
 // computation.  A call to "commit" will record the log messages into some log
 // sink, currently just the logging server
 
-package main
+package common
 
 import (
     "fmt"
@@ -12,6 +12,9 @@ import (
 	"bytes"
     "net/http"
 )
+
+const DOMAIN = "localhost"
+const PORT   = "8000"
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -24,21 +27,38 @@ type Writer [T any] struct {
     Log string
 }
 
+// Monadic Functions
+// --------------------
+
 // Build a writer monad
 func unit [T any] (a T) Writer[T] {
     return Writer[T] {a, ""}
 }
 
 // Compose computations using the writer monad
-func bind [T any, U any] (w Writer[T], f func(T) Writer [U]) Writer[U] {
+func bindLogger [T any, U any] (w Writer[T], f func(T) Writer [U]) Writer[U] {
     var w2 = f(w.Value)
+    sendLog(w2.Log, DOMAIN, PORT)
     return Writer[U] {w2.Value, w.Log + "\n" + w2.Log}
 }
+
+// Helpers 
+// --------------
 
 // prefix our log with the current timestamp
 func logTime[T any] (v T, msg string) Writer[T] {
     t := time.Now()
     return Writer[T]{v, t.Format(time.RFC3339) + " " + msg}
+}
+
+func sendLog (msg string, domain string, port string) {
+    body := []byte(msg)
+    _, err := http.Post("http://" + domain + ":" + port + "/log",
+                          "text/plain",
+                          bytes.NewReader(body))
+    if err != nil {
+        log.Fatalf("Could not commit the logs: %s", err)
+	}
 }
 
 // We want to be able to commit the value of the writer to the log server
@@ -69,7 +89,7 @@ func retrieve () {
     log.Printf("res body:\n%s", string(resBody))
 }
 
-func main () {
+func testLogger () {
     // Build our writer with unit
     var w = unit(1) 
 
@@ -90,10 +110,10 @@ func main () {
         return logTime(i + 1, "incremented i")
     }
     
-    var w2 = bind(w, g)
-    var w3 = bind(w2, g)
-    var w4 = bind(w3, g)
-    var w5 = bind(w4, f)
+    var w2 = bindLogger(w, g)
+    var w3 = bindLogger(w2, g)
+    var w4 = bindLogger(w3, g)
+    var w5 = bindLogger(w4, f)
 
     //log.Print(w5.Log)
     commit(w5, "localhost", "8000")

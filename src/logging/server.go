@@ -49,6 +49,9 @@ func getHandler (w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+}
+
+func main() {
     logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
     failOnError(err, "Could not open log file")
     defer logFile.Close()

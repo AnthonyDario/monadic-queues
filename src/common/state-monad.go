@@ -1,7 +1,7 @@
 // The state monad allows mutable state to be modelled.  It will be used for
 // the configuration, and perhaps the database.
 
-package main
+package common
 
 import (
     "log"
@@ -29,7 +29,7 @@ func produce [S any, T any] (v T) StateMonad[S, T] {
 
 // Bind modifies the monad, applying the given function, f, to its result
 // bind : m a -> (a -> m b) -> mb
-func bind [S any, T any, U any] (m StateMonad[S, T], f func(T) StateMonad[S, U]) StateMonad[S, U]{
+func bindState [S any, T any, U any] (m StateMonad[S, T], f func(T) StateMonad[S, U]) StateMonad[S, U]{
     // The haskell code for this function is below
     // (>>=) :: State s t -> (t -> State s u) -> State s u  
     // m >>= f = \r -> let (x, s) = m r in (f x) s
@@ -123,13 +123,13 @@ func pipeModify[S any, T any] (ms []StateMonad[S, T]) StateMonad[S, T] {
 }
 */
 
-func main () {
+func testState () {
     // A simple example that increments an integer state
 
     // Our stateful computation increments the state by one
     add1 := func (s int) (int) { return s + 1 }
 
-    sm := bind(modify[int, int](add1), 
+    sm := bindState(modify[int, int](add1), 
                func (s int) StateMonad[int, int] { 
                    return modify[int, int](add1) 
                 })
@@ -159,12 +159,12 @@ func main () {
     makeVeggie    := modify[pizzas, pizzas](MakePizza("Veggie"))
 
     // TODO: this is gross, try and figure out the pipeline function above
-    pipeline := bind(makeCheese, wrapModify(makePepperoni))
-    pipeline = bind(pipeline, wrapModify(makePepperoni))
-    pipeline = bind(pipeline, wrapModify(makeMeat))
-    pipeline = bind(pipeline, wrapModify(makeMeat))
-    pipeline = bind(pipeline, wrapModify(makeVeggie))
-    pipeline = bind(pipeline, wrapModify(makeMeat))
+    pipeline := bindState(makeCheese, wrapModify(makePepperoni))
+    pipeline = bindState(pipeline, wrapModify(makePepperoni))
+    pipeline = bindState(pipeline, wrapModify(makeMeat))
+    pipeline = bindState(pipeline, wrapModify(makeMeat))
+    pipeline = bindState(pipeline, wrapModify(makeVeggie))
+    pipeline = bindState(pipeline, wrapModify(makeMeat))
 
     inv := make(pizzas)
     finalPizzas := execState(pipeline, inv)

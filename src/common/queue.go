@@ -1,7 +1,7 @@
 /*
  * For interacting with rabbitmq queues
  */
-package main
+package common
 
 import (
     "context"
