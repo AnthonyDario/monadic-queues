@@ -35,5 +35,5 @@ services:
     image: rabbitmq:latest
     hostname: rabbit
     ports:
-      - "5672"
-      - "15692"
+      - "5672:5672"
+      - "15692:15692"
