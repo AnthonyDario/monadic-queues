@@ -22,7 +22,7 @@ func failOnError(err error, msg string) {
 	}
 }
 
-type Writer [T any] struct {
+type LoggerMonad [T any] struct {
     Value T
     Log string
 }
@@ -31,24 +31,32 @@ type Writer [T any] struct {
 // --------------------
 
 // Build a writer monad
-func unit [T any] (a T) Writer[T] {
-    return Writer[T] {a, ""}
+func LoggerUnit [T any] (a T) LoggerMonad[T] {
+    log := "initialize empty logger monad"
+    sendLog(log, DOMAIN, PORT)
+    return logTime(a, "initialized logger monad")
+}
+
+func LoggerBuild [T any] (a T, msg string) LoggerMonad[T] {
+    sendLog(msg, DOMAIN, PORT)
+    return logTime(a, msg)
 }
 
 // Compose computations using the writer monad
-func bindLogger [T any, U any] (w Writer[T], f func(T) Writer [U]) Writer[U] {
+func LoggerBind [T any, U any] (w LoggerMonad[T], f func(T) LoggerMonad [U]) LoggerMonad[U] {
     var w2 = f(w.Value)
     sendLog(w2.Log, DOMAIN, PORT)
-    return Writer[U] {w2.Value, w.Log + "\n" + w2.Log}
+    return LoggerMonad[U] {w2.Value, w.Log + "\n" + w2.Log}
 }
+
 
 // Helpers 
 // --------------
 
 // prefix our log with the current timestamp
-func logTime[T any] (v T, msg string) Writer[T] {
+func logTime[T any] (v T, msg string) LoggerMonad[T] {
     t := time.Now()
-    return Writer[T]{v, t.Format(time.RFC3339) + " " + msg}
+    return LoggerMonad[T]{v, t.Format(time.RFC3339) + " " + msg}
 }
 
 func sendLog (msg string, domain string, port string) {
@@ -62,7 +70,7 @@ func sendLog (msg string, domain string, port string) {
 }
 
 // We want to be able to commit the value of the writer to the log server
-func commit [T any] (w Writer[T], domain string, port string) {
+func commit [T any] (w LoggerMonad[T], domain string, port string) {
     // Call the log server with our log message
 
     body := []byte(w.Log)
@@ -91,10 +99,10 @@ func retrieve () {
 
 func testLogger () {
     // Build our writer with unit
-    var w = unit(1) 
+    var w = LoggerUnit(1) 
 
-    // Our function from int -> Writer[bool]
-    var f = func (i int) Writer[bool] {
+    // Our function from int -> LoggerMonad[bool]
+    var f = func (i int) LoggerMonad[bool] {
         var isEven = i % 2 == 0
         var log string
         if isEven {
@@ -106,14 +114,14 @@ func testLogger () {
         return logTime(i % 2 == 0, log) 
     }
 
-    var g = func (i int) Writer[int] {
+    var g = func (i int) LoggerMonad[int] {
         return logTime(i + 1, "incremented i")
     }
     
-    var w2 = bindLogger(w, g)
-    var w3 = bindLogger(w2, g)
-    var w4 = bindLogger(w3, g)
-    var w5 = bindLogger(w4, f)
+    var w2 = LoggerBind(w, g)
+    var w3 = LoggerBind(w2, g)
+    var w4 = LoggerBind(w3, g)
+    var w5 = LoggerBind(w4, f)
 
     //log.Print(w5.Log)
     commit(w5, "localhost", "8000")

@@ -16,8 +16,8 @@
         <h2>
             Order Some Pizza!
         </h2>
-        <form action="orderPizza">
-            <label for="toppings">Toppings?</label> </br>
+        <form action="order">
+            <label for="toppings">Toppings?</label> <br />
             <select name="toppings">
                 <option>Cheese</option>
                 <option>Pepperoni</option>
@@ -25,16 +25,24 @@
                 <option>Meat Lovers</option>
             </select>
 
-            </br>
-            </br>
+            <br /> <br />
 
-            <label for="size">Size</label> </br>
+            <label for="size">Size</label> <br />
             <select name="size">
                 <option>Small</option>
                 <option>Medium</option>
                 <option>Large</option>
                 <option>Royalty</option>
             </select>
+
+            <br /> <br />
+
+            <label for="username">What is your name?</label> <br />
+            <input type="text" name="username" value="">
+
+            <br /> <br />
+
+            <input type="submit" value="order">
         </form>
     </div>
 
@@ -45,16 +53,6 @@
         username.</p>
 
         <form action="login">
-            <label for="username"> Username:</label>
-            <input type="text" name="username">
-        </form>
-    </div>
-
-    <div class="center">
-        <h2> Sign Up </h2>
-
-        <p>Sign up to record your order history </p>
-        <form action="signup">
             <label for="username"> Username:</label>
             <input type="text" name="username">
         </form>
