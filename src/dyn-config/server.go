@@ -163,11 +163,23 @@ func makeReadHandler(config *SafeConfig) handler {
 	}
 }
 
+func makeReadAllHandler(config *SafeConfig) handler {
+	return func(w http.ResponseWriter, r *http.Request) {
+        bs, err := json.Marshal(config.conf)
+        failOnError(err, "Could not marshal the return json")
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, string(bs))
+		log.Print("Responded OK to read request")
+	}
+}
+
 func main() {
     config := loadConfig()
 
 	http.HandleFunc("/read", makeReadHandler(&config))
+	http.HandleFunc("/readAll", makeReadAllHandler(&config))
 	http.HandleFunc("/write", makeWriteHandler(&config))
-	log.Print("Starting Log Server")
+	log.Print("Starting Config Server")
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }

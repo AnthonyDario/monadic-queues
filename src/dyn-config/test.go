@@ -54,6 +54,16 @@ func testReading(field string) {
 	log.Printf("read response body: %s", string(resBody))
 }
 
+func testReadAll() {
+    res, err := http.Get("http://localhost:9090/readAll")
+    failOnError(err, "Error with posting the read request")
+
+	resBody, err := io.ReadAll(res.Body)
+    failOnError(err, "Impossible to read entire body of response")
+
+	log.Printf("read response body: %s", string(resBody))
+}
+
 func testWriting(field string, value string) {
     js := fmt.Sprintf("{ \"Field\": \"%s\", \"Value\": \"%s\" }", field, value)
     body := []byte(js)
@@ -70,9 +80,10 @@ func testWriting(field string, value string) {
 
 func main() {
     //testJson()
-    testReading("key")
+    testReading("LogDomain")
     testWriting("newfield", "newvalue")
     testWriting("newnew", "oldold")
     testWriting("dockertest", "dockersuccess")
     testReading("dockertest")
+    testReadAll()
 }
