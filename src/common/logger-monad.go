@@ -52,7 +52,7 @@ func logTime[T any] (v T, msg string, sink string) LoggerMonad[T] {
 
 func sendLog (msg string, sink string) {
     body := []byte(msg)
-    _, err := http.Post(sink, "text/plain", bytes.NewReader(body))
+    _, err := http.Post(sink + "/log", "text/plain", bytes.NewReader(body))
     if err != nil {
         log.Fatalf("Could not commit the logs: %s", err)
 	}
