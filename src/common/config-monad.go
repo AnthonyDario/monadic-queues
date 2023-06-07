@@ -18,7 +18,7 @@ func failOnError(err error, msg string) {
 // The config monad contains the current value of computation and the
 // configuration
 type ConfigMonad [T any] struct {
-    f func(map[string]string) (T)
+    F func(map[string]string) (T)
 }
 
 // The monadic functions
@@ -38,8 +38,8 @@ func ConfigUnit [T any] (v T) ConfigMonad[T] {
 func ConfigBind[T any, U any] (m ConfigMonad[T], f func(T) ConfigMonad[U]) ConfigMonad[U] {
     return ConfigMonad[U] { 
         func (env map[string]string) U {
-            val := m.f(env)
-            return f(val).f(env)
+            val := m.F(env)
+            return f(val).F(env)
         },
     }
 }
@@ -65,7 +65,7 @@ func initialConfig() map[string]string {
 // Runs the config and provides the output value(we know what the environment
 // is already so don't need to provide it)
 func RunConfig [T any] (m ConfigMonad[T]) T {
-    return m.f(initialConfig())
+    return m.F(initialConfig())
 }
 
 func testConfig() {

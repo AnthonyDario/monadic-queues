@@ -13,12 +13,6 @@ import (
     "net/http"
 )
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Panicf("%s: %s", msg, err)
-	}
-}
-
 type LoggerMonad [T any] struct {
     Value T
     Log string
