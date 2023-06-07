@@ -13,9 +13,6 @@ import (
     "net/http"
 )
 
-const DOMAIN = "localhost"
-const PORT   = "8000"
-
 func failOnError(err error, msg string) {
 	if err != nil {
 		log.Panicf("%s: %s", msg, err)
@@ -25,66 +22,39 @@ func failOnError(err error, msg string) {
 type LoggerMonad [T any] struct {
     Value T
     Log string
+    Sink string
 }
 
 // Monadic Functions
 // --------------------
 
 // Build a writer monad
-func LoggerUnit [T any] (a T) LoggerMonad[T] {
-    log := "initialize empty logger monad"
-    sendLog(log, DOMAIN, PORT)
-    return logTime(a, "initialized logger monad")
-}
-
-func LoggerBuild [T any] (a T, msg string) LoggerMonad[T] {
-    sendLog(msg, DOMAIN, PORT)
-    return logTime(a, msg)
+func LoggerUnit [T any] (a T, msg string, sink string) LoggerMonad[T] {
+    sendLog(msg, sink)
+    return logTime(a, msg, sink)
 }
 
 // Compose computations using the writer monad
-func LoggerBind [T any, U any] (w LoggerMonad[T], f func(T) LoggerMonad [U]) LoggerMonad[U] {
-    var w2 = f(w.Value)
-    sendLog(w2.Log, DOMAIN, PORT)
-    return LoggerMonad[U] {w2.Value, w.Log + "\n" + w2.Log}
+func LoggerBind [T any, U any] (w LoggerMonad[T], f func(T, string) LoggerMonad [U]) LoggerMonad[U] {
+    var w2 = f(w.Value, w.Sink)
+    sendLog(w2.Log, w2.Sink)
+    return LoggerMonad[U] {w2.Value, w.Log + "\n" + w2.Log, w2.Sink}
 }
-
 
 // Helpers 
 // --------------
 
 // prefix our log with the current timestamp
-func logTime[T any] (v T, msg string) LoggerMonad[T] {
+func logTime[T any] (v T, msg string, sink string) LoggerMonad[T] {
     t := time.Now()
-    return LoggerMonad[T]{v, t.Format(time.RFC3339) + " " + msg}
+    return LoggerMonad[T]{v, t.Format(time.RFC3339) + " " + msg, sink}
 }
 
-func sendLog (msg string, domain string, port string) {
+func sendLog (msg string, sink string) {
     body := []byte(msg)
-    _, err := http.Post("http://" + domain + ":" + port + "/log",
-                          "text/plain",
-                          bytes.NewReader(body))
+    _, err := http.Post(sink, "text/plain", bytes.NewReader(body))
     if err != nil {
         log.Fatalf("Could not commit the logs: %s", err)
-	}
-}
-
-// We want to be able to commit the value of the writer to the log server
-func commit [T any] (w LoggerMonad[T], domain string, port string) {
-    // Call the log server with our log message
-
-    body := []byte(w.Log)
-    res, err := http.Post("http://" + domain + ":" + port + "/log",
-                          "text/plain",
-                          bytes.NewReader(body))
-	if err != nil {
-		log.Fatalf("Could not commit the logs: %s", err)
-	}
-
-	// Send a post body
-	_, err = io.ReadAll(res.Body)
-	if err != nil {
-		log.Fatalf("Could not read log-server response: %s ", err)
 	}
 }
 
@@ -99,10 +69,10 @@ func retrieve () {
 
 func testLogger () {
     // Build our writer with unit
-    var w = LoggerUnit(1) 
+    var w = LoggerUnit(1, "initialized LoggerMonad", "http://localhost:8000")
 
     // Our function from int -> LoggerMonad[bool]
-    var f = func (i int) LoggerMonad[bool] {
+    var f = func (i int, sink string) LoggerMonad[bool] {
         var isEven = i % 2 == 0
         var log string
         if isEven {
@@ -111,11 +81,11 @@ func testLogger () {
             log = fmt.Sprintf("%d is odd", i)
         }
         
-        return logTime(i % 2 == 0, log) 
+        return logTime(i % 2 == 0, log, sink)
     }
 
-    var g = func (i int) LoggerMonad[int] {
-        return logTime(i + 1, "incremented i")
+    var g = func (i int, sink string) LoggerMonad[int] {
+        return logTime(i + 1, "incremented i", sink)
     }
     
     var w2 = LoggerBind(w, g)
@@ -123,7 +93,6 @@ func testLogger () {
     var w4 = LoggerBind(w3, g)
     var w5 = LoggerBind(w4, f)
 
-    //log.Print(w5.Log)
-    commit(w5, "localhost", "8000")
+    log.Print(w5.Log)
     retrieve()
 }
