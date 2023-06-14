@@ -62,9 +62,6 @@ func retrieve () {
 }
 
 func testLogger () {
-    // Build our writer with unit
-    var w = LoggerUnit(1, "initialized LoggerMonad", "http://localhost:8000")
-
     // Our function from int -> LoggerMonad[bool]
     var f = func (i int, sink string) LoggerMonad[bool] {
         var isEven = i % 2 == 0
@@ -82,6 +79,7 @@ func testLogger () {
         return logTime(i + 1, "incremented i", sink)
     }
     
+    var w = LoggerUnit(1, "initialized LoggerMonad", "http://localhost:8000")
     var w2 = LoggerBind(w, g)
     var w3 = LoggerBind(w2, g)
     var w4 = LoggerBind(w3, g)
