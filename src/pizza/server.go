@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bytes"
     "errors"
     "net/http"
     "log"
@@ -32,6 +33,7 @@ func getKey(key string, q map[string][]string, sink string) c.LoggerMonad[Result
         err = nil
         v = val[0]
     }
+
     return c.LoggerUnit(Result {v, err}, log, sink)
 }
 
@@ -90,24 +92,64 @@ func orderPipeline(query map[string][]string) c.ConfigMonad[c.LoggerMonad[Result
 
 func order(w http.ResponseWriter, r *http.Request) {
     query := r.URL.Query()
-    //lm := c.RunConfig(orderPipeline(query))
     c.RunConfig(orderPipeline(query))
-
-    /*
-    val, err := lm.Value
-    if err {
-    }
-    */
-
     w.WriteHeader(http.StatusOK)
     w.Write([]byte("hello"))
-    //w.Write([]byte("order successful with toppings " + toppings + "size: " + size + "name: " + name))
+}
+
+// The non-monadic approach
+// -------------------------------------
+
+func sendLog (msg string) {
+    body := []byte(msg)
+    _, err := http.Post("http://localhost:8000/log", "text/plain", bytes.NewReader(body))
+    if err != nil {
+        log.Fatalf("Could not commit the logs: %s", err)
+	}
+}
+
+// Return a failure response
+func writeFail(w http.ResponseWriter, msg string) {
+    w.WriteHeader(http.StatusBadRequest)
+    fmt.Fprintf(w, msg)
+}
+
+func orderFree(w http.ResponseWriter, r *http.Request) {
+    q := r.URL.Query()
+
+    toppings, prs := q["toppings"]
+    if !prs {
+        sendLog("toppings not selected")
+        writeFail(w, "toppings not selected")
+        return
+    }
+
+    size, prs := q["size"]
+    if !prs {
+        sendLog("size not selected")
+        writeFail(w, "size not selected")
+        return
+    }
+
+    name, prs := q["username"]
+    if !prs {
+        sendLog("name not selected")
+        writeFail(w, "name not selected")
+        return
+    }
+    
+    msg := "order successful with toppings " + toppings[0] + " size: " + size[0] + " name: " + name[0]
+    sendLog(msg)
+
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte(msg))
 }
 
 func main() {
     fs := http.FileServer(http.Dir("./static"))
     http.Handle("/", fs)
-    http.HandleFunc("/order", order)
+    //http.HandleFunc("/order", order)
+    http.HandleFunc("/order", orderFree)
     log.Print("Starting Pizza Server")
 	log.Fatal(http.ListenAndServe(":9876", nil))
 }
