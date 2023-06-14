@@ -1,6 +1,9 @@
 package main
 
 import (
+    "strconv"
+    "os"
+    "time"
     "bytes"
     "errors"
     "net/http"
@@ -9,6 +12,8 @@ import (
 
     c "common"
 )
+
+type handler func(http.ResponseWriter, *http.Request)
 
 type Result struct {
     Value string
@@ -145,11 +150,25 @@ func orderFree(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte(msg))
 }
 
+func instrument(f func (http.ResponseWriter, *http.Request)) handler {
+    return func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now() 
+        f(w, r)
+
+        end := time.Now()
+        elapsed := end.Sub(start)
+        data, _ := os.OpenFile("data.data", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+        defer data.Close()
+        msg := strconv.Itoa(int(elapsed.Milliseconds())) + "\n"
+        data.WriteString(msg)
+    }
+}
+
 func main() {
     fs := http.FileServer(http.Dir("./static"))
     http.Handle("/", fs)
     //http.HandleFunc("/order", order)
-    http.HandleFunc("/order", orderFree)
+    http.HandleFunc("/order", instrument(orderFree))
     log.Print("Starting Pizza Server")
 	log.Fatal(http.ListenAndServe(":9876", nil))
 }
